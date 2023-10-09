@@ -1,14 +1,21 @@
 import path from 'path'
 import {URL} from 'url'
 import type {Transformer} from '@remark-embedder/core'
-import fetch from 'make-fetch-happen'
 
-fetch.defaults({
-  cachePath: path.join(
-    process.cwd(),
-    'node_modules/.cache/@remark-embedder/transformer-oembed/fetch',
-  ),
-})
+async function safeFetch(url: string) {
+  if (!fetch)
+  {
+    const fetch = await import('make-fetch-happen');
+    fetch.defaults({
+      cachePath: path.join(
+        process.cwd(),
+        'node_modules/.cache/@remark-embedder/transformer-oembed/fetch',
+      ),
+    })
+  }
+  const res = await fetch(url);
+  return res;
+}
 
 type Provider = {
   provider_name: string
@@ -28,7 +35,7 @@ declare namespace getProviders {
 
 async function getProviders(): Promise<Providers> {
   if (!getProviders.cache) {
-    const res = await fetch('https://oembed.com/providers.json')
+    const res = await safeFetch('https://oembed.com/providers.json')
     getProviders.cache = (await res.json()) as Providers
   }
 
@@ -101,7 +108,7 @@ const transformer: Transformer<Config | GetConfig> = {
     // format has to be json so it is not configurable
     url.searchParams.set('format', 'json')
 
-    const res = await fetch(url.toString())
+    const res = await safeFetch(url.toString())
     const data = (await res.json()) as OEmbedData
 
     return data.html
